@@ -1,0 +1,806 @@
+openapi: 3.0.3
+info:
+  title: Booking Management Service API
+  description: A comprehensive booking management system for properties with calendar functionality, guest management, and booking operations.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://api.bookings.example.com/api/v1
+    description: Production server
+
+paths:
+  /properties/{propertyId}/calendar/{year}/{month}:
+    get:
+      summary: Get monthly calendar for a property
+      description: Retrieve calendar view showing booked and available dates for a specific property and month
+      tags:
+        - Calendar
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          description: UUID of the property
+          schema:
+            type: string
+            format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        - name: year
+          in: path
+          required: true
+          description: Year (YYYY format)
+          schema:
+            type: integer
+            minimum: 2020
+            maximum: 2030
+          example: 2024
+        - name: month
+          in: path
+          required: true
+          description: Month (1-12)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          example: 1
+      responses:
+        '200':
+          description: Monthly calendar data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthCalendar'
+        '400':
+          description: Invalid property ID, year, or month
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bookings:
+    post:
+      summary: Create a new booking
+      description: Create a new booking with guest information and additional guests
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid request body or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /properties/{propertyId}/bookings/upcoming:
+    get:
+      summary: Get upcoming bookings for a property
+      description: Retrieve all upcoming bookings for a specific property up to a specified date
+      tags:
+        - Bookings
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          description: UUID of the property
+          schema:
+            type: string
+            format: uuid
+        - name: up_to_date
+          in: query
+          required: false
+          description: End date for the search range (YYYY-MM-DD format). Defaults to 3 months from now.
+          schema:
+            type: string
+            format: date
+          example: "2024-06-30"
+      responses:
+        '200':
+          description: List of upcoming bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid property ID or date format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /properties/{propertyId}/bookings/previous:
+    get:
+      summary: Get previous bookings for a property
+      description: Retrieve all previous bookings for a specific property back to a specified date
+      tags:
+        - Bookings
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          description: UUID of the property
+          schema:
+            type: string
+            format: uuid
+        - name: back_to_date
+          in: query
+          required: false
+          description: Start date for the search range (YYYY-MM-DD format). Defaults to 3 months ago.
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+      responses:
+        '200':
+          description: List of previous bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid property ID or date format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bookings/{bookingId}/cancel:
+    put:
+      summary: Cancel a booking
+      description: Cancel an upcoming booking by setting its status to cancelled
+      tags:
+        - Bookings
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          description: UUID of the booking to cancel
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Booking cancelled successfully
+        '400':
+          description: Invalid booking ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Booking not found or cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bookings/{bookingId}:
+    get:
+      summary: Get a specific booking
+      description: Retrieve detailed information about a specific booking
+      tags:
+        - Bookings
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          description: UUID of the booking
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid booking ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update a booking
+      description: Update booking details with partial data
+      tags:
+        - Bookings
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          description: UUID of the booking to update
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookingRequest'
+      responses:
+        '200':
+          description: Booking updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid booking ID or request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /properties/{propertyId}/bookings/search:
+    get:
+      summary: Search bookings by guest name
+      description: Search for bookings by guest name using partial matching
+      tags:
+        - Bookings
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          description: UUID of the property
+          schema:
+            type: string
+            format: uuid
+        - name: guest_name
+          in: query
+          required: true
+          description: Guest name to search for (partial matching supported)
+          schema:
+            type: string
+          example: "John"
+      responses:
+        '200':
+          description: List of matching bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid property ID or missing guest_name parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /properties:
+    get:
+      summary: Get all properties
+      description: Retrieve a list of all properties in the system
+      tags:
+        - Properties
+      responses:
+        '200':
+          description: List of properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Property'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user
+        username:
+          type: string
+          description: Username for the user
+        email:
+          type: string
+          format: email
+          description: Email address of the user
+        full_name:
+          type: string
+          description: Full name of the user
+        role:
+          type: string
+          enum: [admin, user, manager]
+          description: Role of the user in the system
+        is_active:
+          type: boolean
+          description: Whether the user account is active
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the user was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the user was last updated
+
+    Property:
+      type: object
+      properties:
+        property_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the property
+        property_name:
+          type: string
+          description: Name of the property
+        property_address:
+          type: string
+          description: Address of the property
+        property_type:
+          type: string
+          description: Type of property (e.g., apartment, house, hotel)
+        max_guests:
+          type: integer
+          description: Maximum number of guests the property can accommodate
+        description:
+          type: string
+          description: Description of the property
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the property was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the property was last updated
+      required:
+        - property_id
+        - property_name
+        - property_address
+        - property_type
+        - max_guests
+
+    Guest:
+      type: object
+      properties:
+        guest_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the guest
+        booking_id:
+          type: string
+          format: uuid
+          description: ID of the booking this guest belongs to
+        guest_name:
+          type: string
+          description: Name of the guest
+        guest_id_card:
+          type: string
+          nullable: true
+          description: ID card number of the guest
+        guest_contact_number:
+          type: string
+          nullable: true
+          description: Contact number of the guest
+        guest_age:
+          type: integer
+          nullable: true
+          description: Age of the guest
+        relationship_to_main_guest:
+          type: string
+          nullable: true
+          description: Relationship to the main guest
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the guest record was created
+      required:
+        - guest_id
+        - booking_id
+        - guest_name
+
+    Booking:
+      type: object
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the booking
+        property_id:
+          type: string
+          format: uuid
+          description: ID of the property being booked
+        created_by:
+          type: string
+          format: uuid
+          description: ID of the user who created the booking
+        guest_name:
+          type: string
+          description: Name of the main guest
+        guest_id_card:
+          type: string
+          description: ID card number of the main guest
+        guest_contact_number:
+          type: string
+          description: Contact number of the main guest
+        guest_email:
+          type: string
+          format: email
+          nullable: true
+          description: Email address of the main guest
+        check_in_date:
+          type: string
+          format: date-time
+          description: Check-in date and time
+        check_out_date:
+          type: string
+          format: date-time
+          description: Check-out date and time
+        number_of_guests:
+          type: integer
+          description: Total number of guests
+        total_nights:
+          type: integer
+          description: Total number of nights for the booking
+        booking_notes:
+          type: string
+          nullable: true
+          description: Additional notes for the booking
+        special_requests:
+          type: string
+          nullable: true
+          description: Special requests from the guest
+        booking_status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+          description: Current status of the booking
+        booking_amount:
+          type: number
+          format: float
+          nullable: true
+          description: Total amount for the booking
+        payment_status:
+          type: string
+          enum: [pending, paid, refunded, cancelled]
+          description: Payment status of the booking
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the booking was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the booking was last updated
+        additional_guests:
+          type: array
+          items:
+            $ref: '#/components/schemas/Guest'
+          description: List of additional guests for this booking
+      required:
+        - booking_id
+        - property_id
+        - created_by
+        - guest_name
+        - guest_id_card
+        - guest_contact_number
+        - check_in_date
+        - check_out_date
+        - number_of_guests
+        - booking_status
+        - payment_status
+
+    CalendarDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: The date for this calendar day
+        is_booked:
+          type: boolean
+          description: Whether this date is booked
+        booking_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID of the booking if the date is booked
+      required:
+        - date
+        - is_booked
+
+    MonthCalendar:
+      type: object
+      properties:
+        year:
+          type: integer
+          description: Year of the calendar
+        month:
+          type: integer
+          description: Month of the calendar (1-12)
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarDay'
+          description: List of days in the month
+      required:
+        - year
+        - month
+        - days
+
+    CreateGuestRequest:
+      type: object
+      properties:
+        guest_name:
+          type: string
+          description: Name of the guest
+        guest_id_card:
+          type: string
+          nullable: true
+          description: ID card number of the guest
+        guest_contact_number:
+          type: string
+          nullable: true
+          description: Contact number of the guest
+        guest_age:
+          type: integer
+          nullable: true
+          description: Age of the guest
+        relationship_to_main_guest:
+          type: string
+          nullable: true
+          description: Relationship to the main guest
+      required:
+        - guest_name
+
+    CreateBookingRequest:
+      type: object
+      properties:
+        property_id:
+          type: string
+          format: uuid
+          description: ID of the property to book
+        guest_name:
+          type: string
+          description: Name of the main guest
+        guest_id_card:
+          type: string
+          description: ID card number of the main guest
+        guest_contact_number:
+          type: string
+          description: Contact number of the main guest
+        guest_email:
+          type: string
+          format: email
+          nullable: true
+          description: Email address of the main guest
+        check_in_date:
+          type: string
+          format: date
+          description: Check-in date in YYYY-MM-DD format
+          example: "2024-01-15"
+        check_out_date:
+          type: string
+          format: date
+          description: Check-out date in YYYY-MM-DD format
+          example: "2024-01-20"
+        number_of_guests:
+          type: integer
+          minimum: 1
+          description: Total number of guests
+        booking_notes:
+          type: string
+          nullable: true
+          description: Additional notes for the booking
+        special_requests:
+          type: string
+          nullable: true
+          description: Special requests from the guest
+        booking_amount:
+          type: number
+          format: float
+          nullable: true
+          description: Total amount for the booking
+        additional_guests:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateGuestRequest'
+          description: List of additional guests
+      required:
+        - property_id
+        - guest_name
+        - guest_id_card
+        - guest_contact_number
+        - check_in_date
+        - check_out_date
+        - number_of_guests
+      example:
+        property_id: "123e4567-e89b-12d3-a456-426614174000"
+        guest_name: "John Doe"
+        guest_id_card: "ID123456"
+        guest_contact_number: "+1234567890"
+        guest_email: "john@example.com"
+        check_in_date: "2024-01-15"
+        check_out_date: "2024-01-20"
+        number_of_guests: 2
+        booking_notes: "Anniversary celebration"
+        booking_amount: 500.00
+        additional_guests:
+          - guest_name: "Jane Doe"
+            guest_id_card: "ID123457"
+            guest_contact_number: "+1234567891"
+            guest_age: 30
+            relationship_to_main_guest: "spouse"
+
+    UpdateBookingRequest:
+      type: object
+      properties:
+        guest_name:
+          type: string
+          nullable: true
+          description: Updated name of the main guest
+        guest_id_card:
+          type: string
+          nullable: true
+          description: Updated ID card number of the main guest
+        guest_contact_number:
+          type: string
+          nullable: true
+          description: Updated contact number of the main guest
+        guest_email:
+          type: string
+          format: email
+          nullable: true
+          description: Updated email address of the main guest
+        check_in_date:
+          type: string
+          format: date
+          nullable: true
+          description: Updated check-in date in YYYY-MM-DD format
+        check_out_date:
+          type: string
+          format: date
+          nullable: true
+          description: Updated check-out date in YYYY-MM-DD format
+        number_of_guests:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Updated total number of guests
+        booking_notes:
+          type: string
+          nullable: true
+          description: Updated booking notes
+        special_requests:
+          type: string
+          nullable: true
+          description: Updated special requests
+        booking_amount:
+          type: number
+          format: float
+          nullable: true
+          description: Updated booking amount
+        booking_status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+          nullable: true
+          description: Updated booking status
+        payment_status:
+          type: string
+          enum: [pending, paid, refunded, cancelled]
+          nullable: true
+          description: Updated payment status
+      example:
+        guest_name: "John Smith"
+        number_of_guests: 3
+        booking_notes: "Updated notes"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: integer
+          description: Error code
+        details:
+          type: string
+          description: Additional error details
+      required:
+        - error
+      example:
+        error: "Invalid booking ID"
+        code: 400
+        details: "The provided booking ID is not a valid UUID"
+
+tags:
+  - name: Calendar
+    description: Calendar and availability operations
+  - name: Bookings
+    description: Booking management operations
+  - name: Properties
+    description: Property management operations
